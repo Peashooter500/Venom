@@ -2,12 +2,23 @@ import telebot
 import keyboards
 import fsm
 import ai
+import loguru
+import yaml
+import sys
 
-BOT_TOKEN = '7964698487:AAGWCD_WRTwxD-8fXtywrR5jGQkDwcETxWw'
+logger = loguru.logger
+
+try:
+    with open("./config.yaml", 'r') as file:
+        cfg = yaml.safe_load(file)
+        logger.info("Успешно загружен конфиг")
+except Exception as e:
+    logger.warning("Произошла ошибка при загрузке конфига ({})", str(e))
+    sys.exit(1)
+BOT_TOKEN = cfg['telegram_token']
 stater = fsm.FSM()
-ai_service = ai.AI()
-bot = telebot.TeleBot(BOT_TOKEN)
-
+ai_service = ai.AI(cfg)
+bot = telebot.TeleBot(BOT_TOKEN, threaded=False)
 
 def handle_default_state(message):
     if message.text == "Фото":
@@ -47,6 +58,14 @@ def return_to_menu(chat_id):
 def echo(message):
     state = stater.get_state(message.chat.id)
     msg_text = message.text
+
+    logger.info(
+        "Пользователь [{:}] отправил сообщение '{}' в состоянии {}",
+        message.chat.id,
+        message.from_user.first_name,
+        message.text,
+        state
+    )
     if state == fsm.DEFAULT_STATE :
         handle_default_state(message)
     elif state == fsm.IMAGE_STATE:  
